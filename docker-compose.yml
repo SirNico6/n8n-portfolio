@@ -1,0 +1,30 @@
+# n8n local para el portafolio.
+#
+# Version fijada a proposito: 'latest' hace que el repo deje de ser
+# reproducible. 2.44.6 es lo que n8n marca como stable al 23/10/2026.
+#
+# OJO: n8n mantiene varias lineas de release en paralelo (1.x, 2.x y v3
+# nightly). Ordenar los tags de Docker Hub por fecha engania: el tag mas
+# recien publicado puede ser mantenimiento de 1.x, no la version mas nueva.
+# Verificar contra los dist-tags de npm: npm view n8n dist-tags
+
+services:
+  n8n:
+    image: n8nio/n8n:2.44.6
+    container_name: n8n-portfolio
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE}
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+    volumes:
+      # Persistencia: credenciales, workflows y base local de n8n.
+      - n8n_data:/home/node/.n8n
+      # Los casos montados solo-lectura, para importar JSONs desde adentro.
+      - ./casos:/casos:ro
+
+volumes:
+  n8n_data:
