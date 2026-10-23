@@ -1,0 +1,350 @@
+{
+  "name": "caso-01 - B robusto - lead intake",
+  "nodes": [
+    {
+      "id": "bbbb1111-1111-4111-8111-111111111111",
+      "name": "Formulario web",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -460,
+        0
+      ],
+      "webhookId": "bbbb1111-1111-4111-8111-111111111111",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-intake",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "bbbb2222-2222-4222-8222-222222222222",
+      "name": "Normalizar y validar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Normaliza, sanitiza y valida el lead ANTES de tocar ningun sistema externo.\n// Cada regla de aca sale de una falla medida en la version A: ver fallas-version-A.md\n\nconst MAX_PAYLOAD = 64 * 1024;   // bytes del body crudo\nconst MAX_FIELD   = 2000;        // caracteres por campo de texto\n\n// HubSpot rechaza emails con espacios, y su mensaje de error se los come:\n// muestra un email que parece valido y lo llama invalido. Recortar es obligatorio.\nconst EMAIL_RE = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/;\n\n// Quita HTML/JS y neutraliza formulas de planilla.\n// Un payload con <script> no lo rechaza HubSpot: lo bloquea Cloudflare, y el\n// error que vuelve dice \"check your credentials\". Sanitizar evita esa pista falsa.\nfunction sanitize(v) {\n  if (typeof v !== 'string') return '';\n  let s = v.replace(/<[^>]*>/g, '');                   // etiquetas HTML\n  s = s.replace(/[\\u0000-\\u001F\\u007F]/g, ' ');     // caracteres de control\n  s = s.replace(/\\s+/g, ' ').trim();\n  // Si arranca con = + - @ la planilla destino lo evalua como formula.\n  if (/^[=+\\-@]/.test(s)) s = \"'\" + s;\n  return s;\n}\n\n// Normaliza a E.164. Uruguay por defecto; cambiar segun el cliente.\nfunction normalizePhone(raw, defaultCountry = '598') {\n  if (typeof raw !== 'string' || !raw.trim()) return null;\n  let d = raw.replace(/[^\\d+]/g, '');\n  if (d.startsWith('00')) d = '+' + d.slice(2);\n  if (!d.startsWith('+')) d = '+' + defaultCountry + d.replace(/^0+/, '');\n  return /^\\+[1-9]\\d{7,14}$/.test(d) ? d : null;\n}\n\nconst out = [];\n\nfor (const item of $input.all()) {\n  const body = item.json.body ?? {};\n  const raw = JSON.stringify(body);\n  const errors = [];\n\n  // 1. Tamanio primero: no gastar una llamada a la API en un payload absurdo.\n  if (raw.length > MAX_PAYLOAD) {\n    errors.push('payload demasiado grande: ' + raw.length + ' bytes, maximo ' + MAX_PAYLOAD);\n  }\n\n  // 2. Email: recortar y bajar a minusculas ANTES de validar.\n  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';\n  if (!email) errors.push('falta el campo requerido: email');\n  else if (!EMAIL_RE.test(email)) errors.push('email invalido: \"' + email + '\"');\n\n  // 3. Nombre requerido.\n  const first_name = sanitize(body.first_name).slice(0, MAX_FIELD);\n  if (!first_name) errors.push('falta el campo requerido: first_name');\n\n  // 4. Telefono opcional, pero si viene tiene que normalizar.\n  const phone = normalizePhone(body.phone);\n  if (body.phone && !phone) errors.push('telefono no normalizable a E.164: \"' + body.phone + '\"');\n\n  const lead = {\n    email,\n    first_name,\n    last_name: sanitize(body.last_name).slice(0, MAX_FIELD),\n    phone,\n    company: sanitize(body.company).slice(0, MAX_FIELD),\n    message: sanitize(body.message).slice(0, MAX_FIELD),\n    source: sanitize(body.source) || 'unknown',\n    received_at: new Date().toISOString(),\n  };\n\n  out.push({\n    json: {\n      ok: errors.length === 0,\n      errors,\n      dedupe_key: email,\n      lead,\n      raw_payload: raw.slice(0, 8000),\n    },\n  });\n}\n\nreturn out;\n"
+      }
+    },
+    {
+      "id": "bbbb3333-3333-4333-8333-333333333333",
+      "name": "Payload valido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -20,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-ok",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "bbbb4444-4444-4444-8444-444444444444",
+      "name": "Responder 202 aceptado",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        200,
+        -140
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: \"accepted\", email: $json.lead.email }) }}",
+        "options": {
+          "responseCode": 202
+        }
+      }
+    },
+    {
+      "id": "bbbb5555-5555-4555-8555-555555555555",
+      "name": "Responder 400 con detalle",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        200,
+        160
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: \"rejected\", errors: $json.errors }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    },
+    {
+      "id": "bbbb6666-6666-4666-8666-666666666666",
+      "name": "Descartar duplicados",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        420,
+        -140
+      ],
+      "parameters": {
+        "operation": "removeItemsSeenInPreviousExecutions",
+        "logic": "removeItemsWithAlreadySeenKeyValues",
+        "dedupeValue": "={{ $json.dedupe_key }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "bbbb7777-7777-4777-8777-777777777777",
+      "name": "Crear contacto en HubSpot",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        640,
+        -140
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "authentication": "appToken",
+        "resource": "contact",
+        "operation": "upsert",
+        "email": "={{ $json.lead.email }}",
+        "additionalFields": {
+          "firstName": "={{ $json.lead.first_name }}",
+          "lastName": "={{ $json.lead.last_name }}",
+          "phoneNumber": "={{ $json.lead.phone }}",
+          "companyName": "={{ $json.lead.company }}",
+          "message": "={{ $json.lead.message }}"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "bbbb8888-8888-4888-8888-888888888888",
+      "name": "Avisar al equipo",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        -260
+      ],
+      "disabled": true,
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "REEMPLAZAR_CHAT_ID",
+        "text": "=Nuevo lead: {{ $('Normalizar y validar').item.json.lead.first_name }} {{ $('Normalizar y validar').item.json.lead.last_name }} - {{ $('Normalizar y validar').item.json.lead.email }}",
+        "additionalFields": {}
+      }
+    },
+    {
+      "id": "bbbb9999-9999-4999-8999-999999999999",
+      "name": "Guardar en dead letter queue",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "W8yrbsUnaw9DEKXT",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "value": {
+            "received_at": "={{ $now.toISO() }}",
+            "email": "={{ $('Normalizar y validar').item.json.lead.email }}",
+            "payload": "={{ $('Normalizar y validar').item.json.raw_payload }}",
+            "error_message": "={{ $json.error?.message || $json.error || \"error desconocido\" }}",
+            "error_node": "Crear contacto en HubSpot",
+            "execution_id": "={{ $execution.id }}",
+            "workflow_name": "={{ $workflow.name }}"
+          },
+          "schema": [
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "payload",
+              "displayName": "payload",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "error_message",
+              "displayName": "error_message",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "error_node",
+              "displayName": "error_node",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "execution_id",
+              "displayName": "execution_id",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "workflow_name",
+              "displayName": "workflow_name",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Formulario web": {
+      "main": [
+        [
+          {
+            "node": "Normalizar y validar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar y validar": {
+      "main": [
+        [
+          {
+            "node": "Payload valido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Payload valido?": {
+      "main": [
+        [
+          {
+            "node": "Responder 202 aceptado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 400 con detalle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Responder 202 aceptado": {
+      "main": [
+        [
+          {
+            "node": "Descartar duplicados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descartar duplicados": {
+      "main": [
+        [
+          {
+            "node": "Crear contacto en HubSpot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear contacto en HubSpot": {
+      "main": [
+        [
+          {
+            "node": "Avisar al equipo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Guardar en dead letter queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
