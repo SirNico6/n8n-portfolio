@@ -67,3 +67,21 @@ crea. Para escribir contactos alcanzan `crm.objects.contacts.read` y
 
 **Estado:** service keys seguían en beta pública en las notas de release de
 HubSpot del otoño 2026. Verificar antes de apoyarse en esto para un cliente.
+
+### Verificado en vivo (2026-10-23)
+
+La service key emitida hoy tiene **prefijo `pat-` y 44 caracteres**: el mismo
+formato que un private app token. Por eso la credencial App Token de n8n la
+toma sin cambios.
+
+Probada contra la API real:
+
+```bash
+curl -H "Authorization: Bearer $HUBSPOT_SERVICE_KEY" \
+  "https://api.hubapi.com/crm/v3/objects/contacts?limit=2&properties=email,firstname,lastname"
+# HTTP 200, devuelve los contactos
+```
+
+Ese curl es la forma rápida de descartar la credencial como causa cuando un
+workflow falla: si el curl da 200 y el nodo falla igual, el problema está en
+el nodo, no en la key.
