@@ -1,0 +1,15 @@
+# Normalizacion de finales de linea.
+# Sin esto, en Windows git guarda CRLF y un .sh clonado en Linux
+# falla con "bad interpreter: No such file or directory".
+
+* text=auto eol=lf
+
+*.sh      text eol=lf
+*.json    text eol=lf
+*.md      text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+
+*.png     binary
+*.jpg     binary
+*.mp4     binary
