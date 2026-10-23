@@ -1,203 +1,201 @@
-# Guion de demo — caso 01
+# Demo script — case 01
 
-Video de 4 minutos. Pantalla grabada, sin cara, sin música, sin intro animada.
+A four-minute video. Screen recording, no face, no music, no animated intro.
 
-**La regla:** nada de esto se cuenta. Todo se muestra pasando en vivo. Si un
-momento no se puede mostrar, no va.
+**The rule:** none of this gets narrated as a claim. All of it gets shown
+happening live. If a moment cannot be shown, it does not go in.
 
-## Antes de grabar
+## Before recording
 
-- [ ] n8n corriendo, los tres workflows publicados
-- [ ] HubSpot abierto en *Contacts*, ordenado por fecha de creación descendente
-- [ ] La tabla `lead_dead_letter` **vacía** (`clear` desde el nodo o la API)
-- [ ] Contactos de prueba borrados de HubSpot, salvo los dos de ejemplo
-- [ ] Terminal con fuente grande, en el directorio del caso
-- [ ] Telegram a la vista si las notificaciones están configuradas
-- [ ] Dos ventanas: terminal a la izquierda, navegador a la derecha
+- [ ] n8n running, all three workflows published
+- [ ] HubSpot open on *Contacts*, sorted by creation date descending
+- [ ] The `lead_dead_letter` table **empty** (`clear` from the node or the API)
+- [ ] Test contacts deleted from HubSpot, except the two sample ones
+- [ ] Terminal with a large font, in the case directory
+- [ ] Telegram visible if notifications are configured
+- [ ] Two windows: terminal on the left, browser on the right
 
-Ensayalo una vez entero antes de grabar. El valor está en el ritmo, no en el
-contenido: el contenido ya está medido.
-
----
-
-## 0:00 – 0:25 · El gancho
-
-**En pantalla:** el workflow A en el canvas de n8n. Cuatro nodos, prolijo.
-
-**Decís:**
-
-> Este es el flujo de captura de leads más común que existe. Formulario,
-> mapear campos, CRM, aviso al equipo. Cuatro nodos. Funciona.
->
-> Le voy a mandar ocho formularios reales. No inventados: reales. Un email con
-> un espacio de más, alguien que apretó Enviar dos veces, un campo vacío.
->
-> Mirá cuántos llegan.
-
-No menciones todavía que hay una segunda versión.
+Rehearse it once end to end before recording. The value is in the pacing, not in
+the content: the content is already measured.
 
 ---
 
-## 0:25 – 1:20 · Romper A en vivo
+## 0:00 – 0:25 · The hook
 
-**Hacés:**
+**On screen:** workflow A on the n8n canvas. Four nodes, tidy.
+
+**You say:**
+
+> This is the most common lead capture flow there is. Form, map fields, CRM,
+> notify the team. Four nodes. It works.
+>
+> I'm going to send it eight real form submissions. Not made up: real. An email
+> with an extra space, somebody who hit Submit twice, an empty field.
+>
+> Watch how many arrive.
+
+Do not mention yet that there is a second version.
+
+---
+
+## 0:25 – 1:20 · Breaking A live
+
+**You do:**
 
 ```bash
-bash fixtures/enviar.sh http://localhost:5678/webhook/lead-intake-naive
+bash fixtures/send.sh http://localhost:5678/webhook/lead-intake-naive
 ```
 
-**En pantalla:** la salida corriendo. Se ve `HTTP 500` seis veces.
+**On screen:** the output running. `HTTP 500` appears six times.
 
-**Decís, mientras corre:**
+**You say, while it runs:**
 
-> Doscientos. Quinientos. Quinientos. Quinientos. Doscientos. Quinientos.
-> Quinientos. Quinientos.
+> Two hundred. Five hundred. Five hundred. Five hundred. Two hundred. Five
+> hundred. Five hundred. Five hundred.
 >
-> Seis de ocho. Y fijate el cuerpo del error: `Error in workflow`. Eso es todo
-> lo que recibe el formulario. Eso es todo lo que ve el visitante.
+> Six out of eight. And look at the error body: `Error in workflow`. That is
+> everything the form receives. That is everything the visitor sees.
 
-**Pausá un segundo sobre la salida.** Que se lea.
+**Pause on the output for a second.** Let it be read.
 
 ---
 
-## 1:20 – 2:00 · Dónde fue a parar el lead
+## 1:20 – 2:00 · Where the lead went
 
-**En pantalla:** HubSpot, lista de contactos. Hay un contacto nuevo. Uno.
+**On screen:** HubSpot, contact list. There is one new contact. One.
 
-**Decís:**
+**You say:**
 
-> Ocho personas completaron el formulario. En el CRM hay una.
+> Eight people filled in the form. There is one in the CRM.
 
-**Cambiás a n8n → Executions de A.** Abrís la ejecución del fixture `03`.
-Hacés zoom en el nodo rojo de HubSpot.
+**Switch to n8n → A's Executions.** Open the run for fixture `03`. Zoom into the
+red HubSpot node.
 
-**Decís:**
+**You say:**
 
-> Acá está el mejor de todos. El email que entró fue —señalás el input—
-> `espacio espacio L-U-C-I-A punto B-E-N-I-T-E-Z arroba...`, con espacios
-> adelante y atrás.
+> Here is the best one of all. The email that went in was — point at the input —
+> space, space, L-U-C-I-A dot B-E-N-I-T-E-Z at, with whitespace on both sides.
 >
-> Y el error que devuelve HubSpot dice: *Email address LUCIA.BENITEZ@Example.COM
-> is invalid*. Sin los espacios.
+> And the error HubSpot returns reads: *Email address
+> LUCIA.BENITEZ@Example.COM is invalid*. Without the whitespace.
 >
-> O sea: te muestra un email que se ve perfectamente válido y te dice que es
-> inválido. El espacio, que es la causa, no aparece en ningún lado del mensaje.
+> So: it shows you an email that looks perfectly valid and tells you it is
+> invalid. The space, which is the cause, appears nowhere in the message.
 >
-> Si te llaman por esto, vas a mirar el email, lo vas a ver bien, y vas a
-> perder una hora buscando en el lugar equivocado.
+> If somebody calls you about this, you will look at the email, you will see it
+> is fine, and you will spend an hour looking in the wrong place.
 
-**Esta es la parte más importante del video.** No la apures.
+**This is the most important part of the video.** Do not rush it.
 
 ---
 
-## 2:00 – 2:20 · El giro
+## 2:00 – 2:20 · The turn
 
-**Decís, sin cambiar de pantalla:**
+**You say, without changing screens:**
 
-> Ahora. Nada de lo que viene cambia el CRM. Es la misma HubSpot, la misma
-> cuenta, los mismos ocho formularios.
+> Now. Nothing that follows changes the CRM. Same HubSpot, same account, same
+> eight submissions.
 >
-> Lo único distinto es el workflow.
+> The only difference is the workflow.
 
 ---
 
-## 2:20 – 3:10 · Los mismos ocho contra B
+## 2:20 – 3:10 · The same eight against B
 
-**En pantalla:** el canvas de B. Dejalo dos segundos: se ve que tiene más
-nodos, pero no lo expliques nodo por nodo. A nadie le importa.
+**On screen:** B's canvas. Leave it for two seconds: it is visibly bigger, but do
+not walk through it node by node. Nobody cares.
 
-**Hacés:**
+**You do:**
 
 ```bash
-bash fixtures/enviar.sh http://localhost:5678/webhook/lead-intake
+bash fixtures/send.sh http://localhost:5678/webhook/lead-intake
 ```
 
-**En pantalla:** la salida. Ningún `500`.
+**On screen:** the output. No `500` anywhere.
 
-**Decís:**
+**You say:**
 
-> Ningún quinientos.
+> No five hundreds.
 >
-> Los que entran, entran. Los que se rechazan, se rechazan diciendo por qué
-> —señalás— `email invalido: diego.pereyra@@example`. `falta el campo
-> requerido: email`. `payload demasiado grande`.
+> The ones that get in, get in. The ones that get rejected say why — point at it
+> — `invalid email: diego.pereyra@@example`. `missing required field: email`.
+> `payload too large`.
 >
-> Eso es un error que le sirve a alguien.
+> That is an error somebody can act on.
 
 ---
 
-## 3:10 – 3:35 · El duplicado, que es el argumento
+## 3:10 – 3:35 · The duplicate, which is the argument
 
-**En pantalla:** n8n → Executions de B → la ejecución del fixture `05b`.
-Abrís el nodo *Descartar duplicados*. **Mostrás que la salida es 0 items.**
+**On screen:** n8n → B's Executions → the run for fixture `05b`. Open the *Drop
+duplicates* node. **Show that the output is 0 items.**
 
-**Decís:**
+**You say:**
 
-> Este es el mismo lead de antes, pero escrito distinto: mayúsculas y espacios.
+> This is the same lead as before, typed differently: capitals and whitespace.
 >
-> En la versión anterior esto daba error quinientos y el lead desaparecía.
-> Acá el nodo de deduplicación lo reconoció como repetido. Salida: cero.
+> In the previous version this returned a five hundred and the lead disappeared.
+> Here the deduplication node recognised it as a repeat. Output: zero.
 >
-> No se cargó dos veces. Y no le van a llamar dos veces.
+> It was not loaded twice. And nobody is going to call them twice.
 >
-> ¿Qué cambió? Que alguien recortó un espacio antes de preguntar.
+> What changed? Somebody trimmed a space before asking.
 
 ---
 
-## 3:35 – 4:00 · Lo que igual falla
+## 3:35 – 4:00 · What still fails
 
-**En pantalla:** la tabla `lead_dead_letter` con sus filas.
+**On screen:** the `lead_dead_letter` table with its rows.
 
-**Decís:**
+**You say:**
 
-> Y este es el que igual falló. Un payload con código adentro, que el CRM
-> bloquea. En la versión anterior se evaporaba.
+> And this is the one that still failed. A payload with code inside it, which the
+> CRM blocks. In the previous version it evaporated.
 >
-> Acá está: el email, el payload completo, qué nodo falló, y el link a la
-> ejecución.
+> Here it is: the email, the complete payload, which node failed, and the link to
+> the execution.
 >
-> No es que nada falle. Es que nada se pierde.
+> It is not that nothing fails. It is that nothing is lost.
 
-Si Telegram está configurado, mostrá la alerta llegando, con el link.
+If Telegram is configured, show the alert arriving, with its link.
 
 ---
 
-## 4:00 – 4:20 · Cierre
+## 4:00 – 4:20 · Close
 
-**En pantalla:** la tabla A vs B de `resultados-A-vs-B.md`.
+**On screen:** the A vs B table from `results-A-vs-B.md`.
 
-**Decís:**
+**You say:**
 
-> Seis de ocho contra cero de ocho. Mismos datos, mismo CRM.
+> Six out of eight against zero out of eight. Same data, same CRM.
 >
-> Si tenés una automatización que funciona casi siempre, esa es la que quiero
-> ver. Mandame qué se rompe y te digo si lo puedo arreglar.
+> If you have an automation that works most of the time, that is the one I want
+> to see. Send me what breaks and I'll tell you whether I can fix it.
 
-**Cortá ahí.** Sin "suscribite", sin logo, sin pantalla final.
+**Cut there.** No "subscribe", no logo, no end card.
 
 ---
 
-## Notas de edición
+## Editing notes
 
-- **Sin música.** Compite con la voz y el contenido no la necesita.
-- **Cortá los tiempos muertos.** Cada `curl` que tarda dos segundos, cortalo.
-  Pero **no cortes la salida de los fixtures**: que se vea corriendo de verdad
-  es la prueba de que no está armado.
-- **Zoom donde importa.** Tres momentos: el mensaje de error de HubSpot sin los
-  espacios, la salida `0` del nodo de deduplicación, la fila de la cola. Esos
-  tres planos son el video.
-- **Sin texto en pantalla**, salvo subtítulos. Los carteles con flechas hacen
-  que parezca anuncio.
-- **Mostrá los errores que quedan.** No edites el `500` del fixture de
-  inyección en B. Que la versión robusta también tenga un caso que falla es lo
-  que hace creíble al resto.
+- **No music.** It competes with the voice and the content does not need it.
+- **Cut the dead time.** Every `curl` that takes two seconds, cut it. But **do not
+  cut the fixture run**: seeing it actually execute is the proof it is not staged.
+- **Zoom where it matters.** Three moments: HubSpot's error message without the
+  whitespace, the `0` output of the deduplication node, the queue row. Those
+  three shots are the video.
+- **No on-screen text**, except subtitles. Captions with arrows make it look like
+  an ad.
+- **Show the errors that remain.** Do not edit out the `500` from the injection
+  fixture in B. The robust version also having a failing case is what makes the
+  rest believable.
 
-## Versión corta de 60 segundos
+## 60-second cut
 
-Para publicar suelto o mandar en una propuesta:
+For posting standalone or attaching to a proposal:
 
-1. `0:00-0:10` — "Ocho formularios reales contra un flujo de captura de leads normal."
-2. `0:10-0:25` — La corrida de A. Seis `500` pasando.
-3. `0:25-0:40` — El error de HubSpot sin los espacios. Zoom.
-4. `0:40-0:55` — La corrida de B. Ningún `500`.
-5. `0:55-1:00` — "Mismo CRM, mismos datos. Lo único distinto es el workflow."
+1. `0:00-0:10` — "Eight real form submissions against a normal lead capture flow."
+2. `0:10-0:25` — A's run. Six `500`s going past.
+3. `0:25-0:40` — HubSpot's error without the whitespace. Zoom.
+4. `0:40-0:55` — B's run. No `500`.
+5. `0:55-1:00` — "Same CRM, same data. The only difference is the workflow."

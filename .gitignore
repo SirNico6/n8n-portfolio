@@ -1,23 +1,26 @@
-# Secretos — nunca se commitean
+# Secrets — never committed
 .env
 .env.local
 *.key
 *.pem
 credentials.json
 
-# Exports de n8n que puedan arrastrar credenciales
+# n8n exports that might carry credentials
 *-with-credentials.json
 exports-raw/
 
-# Datos locales de n8n
+# Local n8n data
 .n8n/
 n8n-data/
+
+# Personal sales material stays out of the public repo
+sales/
 
 # Node
 node_modules/
 npm-debug.log*
 
-# SO
+# OS
 Thumbs.db
 desktop.ini
 .DS_Store

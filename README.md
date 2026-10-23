@@ -15,7 +15,7 @@ diagram. It's in the results table.
 
 | Case | What it solves | Status |
 |---|---|---|
-| [case-01 · lead intake](casos/caso-01-lead-intake/) | Capturing web form leads into a CRM without losing any | Running and measured |
+| [case-01 · lead intake](cases/case-01-lead-intake/) | Capturing web form leads into a CRM without losing any | Running and measured |
 
 ## Case 01 result, in one line
 
@@ -24,7 +24,7 @@ The same eight payloads against both versions:
 - **A:** six out of eight end in a generic `HTTP 500`. The lead disappears with no trace.
 - **B:** no `500` at all. Every rejection names the field and the reason, and whatever still fails lands in a replay queue.
 
-Full breakdown: [resultados-A-vs-B.md](casos/caso-01-lead-intake/resultados-A-vs-B.md).
+Full breakdown: [results-A-vs-B.md](cases/case-01-lead-intake/results-A-vs-B.md).
 
 ## Running it
 
@@ -45,7 +45,7 @@ docker compose up -d
 
 Verified on 23 Oct 2026 against Docker 29.9.2 on WSL2: the image pulls, the
 container starts, `/healthz` returns `200`, the `.env` variables reach the
-container and the `casos/` volume mounts. All three workflows import over the
+container and the `cases/` volume mounts. All three workflows import over the
 API and the validation path returns the same status codes as the Node install.
 
 ### With Node
@@ -68,10 +68,10 @@ From the n8n UI, or over the API with a key created under
 ```bash
 curl -X POST "http://localhost:5678/api/v1/workflows" \
   -H "X-N8N-API-KEY: $N8N_API_KEY" -H "Content-Type: application/json" \
-  --data-binary @casos/caso-01-lead-intake/workflow-B-robusto.json
+  --data-binary @cases/case-01-lead-intake/workflow-B-robust.json
 ```
 
-Case 01 has its own [README](casos/caso-01-lead-intake/README.md) with the full
+Case 01 has its own [README](cases/case-01-lead-intake/README.md) with the full
 walkthrough, including credentials and the replay queue table.
 
 ## Verifying without running anything
@@ -79,9 +79,9 @@ walkthrough, including credentials and the replay queue table.
 The normalization and validation logic is tested without n8n:
 
 ```bash
-node casos/caso-01-lead-intake/test-normalizacion.js
-node kb/snippets/sanitizar-texto.js
-node kb/snippets/telefono-e164.js
+node cases/case-01-lead-intake/test-normalization.js
+node kb/snippets/sanitize-text.js
+node kb/snippets/phone-e164.js
 ```
 
 The first one reads the code straight out of the workflow JSON, so it cannot
@@ -90,9 +90,8 @@ drift out of sync with the workflow it is testing.
 ## Layout
 
 ```
-casos/      One directory per case: workflows, fixtures, measured results, demo
+cases/      One directory per case: workflows, fixtures, measured results, demo
 kb/         Reusable knowledge: patterns, per-service gotchas, snippets
-venta/      Commercial material
 ```
 
 The [knowledge base](kb/README.md) is the real asset. Its gotchas come from
@@ -100,12 +99,13 @@ breaking things and reading the error, not from reading documentation — for
 example, that HubSpot trims whitespace out of its own error messages, so it
 shows you an email that looks perfectly valid and tells you it is invalid.
 
-## A note on language
+## Where to start
 
-Client-facing documents are in English. Internal material — the knowledge base,
-the demo script, commercial notes — is in Spanish, which is the working
-language here. Start with the case README and the
-[client handover document](casos/caso-01-lead-intake/entregable-cliente.md).
+The [case README](cases/case-01-lead-intake/README.md) explains the problem and
+the decisions. [results-A-vs-B.md](cases/case-01-lead-intake/results-A-vs-B.md)
+is the measured comparison. The
+[client handover document](cases/case-01-lead-intake/client-handover.md) is what
+a real client receives at the end of a job.
 
 ## What this is not
 

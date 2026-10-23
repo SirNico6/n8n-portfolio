@@ -121,7 +121,7 @@ The validation logic has its own test, which can be run at any time without
 starting n8n:
 
 ```bash
-node test-normalizacion.js
+node test-normalization.js
 ```
 
 Ten assertions. The test reads the logic directly out of the workflow file, so

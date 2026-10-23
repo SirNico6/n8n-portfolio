@@ -1,12 +1,12 @@
-# n8n local para el portafolio.
+# Local n8n for the portfolio.
 #
-# Version fijada a proposito: 'latest' hace que el repo deje de ser
-# reproducible. 2.44.6 es lo que n8n marca como stable al 23/10/2026.
+# The version is pinned on purpose: 'latest' makes the repo stop being
+# reproducible. 2.44.6 is what n8n marks as stable as of 2026-10-23.
 #
-# OJO: n8n mantiene varias lineas de release en paralelo (1.x, 2.x y v3
-# nightly). Ordenar los tags de Docker Hub por fecha engania: el tag mas
-# recien publicado puede ser mantenimiento de 1.x, no la version mas nueva.
-# Verificar contra los dist-tags de npm: npm view n8n dist-tags
+# CAREFUL: n8n maintains several release lines in parallel (1.x, 2.x and v3
+# nightly). Sorting Docker Hub tags by date is misleading: the most recently
+# published tag can be maintenance on 1.x rather than the newest version.
+# Check against npm's dist-tags: npm view n8n dist-tags
 
 services:
   n8n:
@@ -21,10 +21,10 @@ services:
       - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE}
       - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
     volumes:
-      # Persistencia: credenciales, workflows y base local de n8n.
+      # Persistence: credentials, workflows and n8n's local database.
       - n8n_data:/home/node/.n8n
-      # Los casos montados solo-lectura, para importar JSONs desde adentro.
-      - ./casos:/casos:ro
+      # Cases mounted read-only, so JSONs can be imported from inside.
+      - ./cases:/cases:ro
 
 volumes:
   n8n_data:
