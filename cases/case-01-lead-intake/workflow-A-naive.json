@@ -1,9 +1,9 @@
 {
-  "name": "caso-01 · A naive · lead intake",
+  "name": "case-01 · A naive · lead intake",
   "nodes": [
     {
       "id": "aaaa1111-1111-4111-8111-111111111111",
-      "name": "Formulario web",
+      "name": "Web form",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.2,
       "position": [
@@ -20,7 +20,7 @@
     },
     {
       "id": "aaaa2222-2222-4222-8222-222222222222",
-      "name": "Mapear campos",
+      "name": "Map fields",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.5,
       "position": [
@@ -75,13 +75,13 @@
     },
     {
       "id": "aaaa3333-3333-4333-8333-333333333333",
-      "name": "Crear contacto en HubSpot",
-      "type": "n8n-nodes-base.hubspot",
-      "typeVersion": 2.2,
+      "name": "Create contact in HubSpot",
       "position": [
         220,
         0
       ],
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
       "parameters": {
         "authentication": "appToken",
         "resource": "contact",
@@ -99,18 +99,18 @@
     },
     {
       "id": "aaaa4444-4444-4444-8444-444444444444",
-      "name": "Avisar al equipo",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
+      "name": "Notify the team",
       "position": [
         440,
         0
       ],
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
       "parameters": {
         "resource": "message",
         "operation": "sendMessage",
-        "chatId": "REEMPLAZAR_CHAT_ID",
-        "text": "=Nuevo lead: {{ $('Mapear campos').item.json.first_name }} {{ $('Mapear campos').item.json.last_name }} — {{ $('Mapear campos').item.json.email }} — {{ $('Mapear campos').item.json.company }}",
+        "chatId": "REPLACE_WITH_YOUR_CHAT_ID",
+        "text": "=New lead: {{ $('Map fields').item.json.first_name }} {{ $('Map fields').item.json.last_name }} - {{ $('Map fields').item.json.email }} - {{ $('Map fields').item.json.company }}",
         "additionalFields": {
           "appendAttribution": false
         }
@@ -118,33 +118,33 @@
     }
   ],
   "connections": {
-    "Formulario web": {
+    "Web form": {
       "main": [
         [
           {
-            "node": "Mapear campos",
+            "node": "Map fields",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Mapear campos": {
+    "Map fields": {
       "main": [
         [
           {
-            "node": "Crear contacto en HubSpot",
+            "node": "Create contact in HubSpot",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Crear contacto en HubSpot": {
+    "Create contact in HubSpot": {
       "main": [
         [
           {
-            "node": "Avisar al equipo",
+            "node": "Notify the team",
             "type": "main",
             "index": 0
           }

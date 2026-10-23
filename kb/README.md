@@ -1,28 +1,25 @@
-# Knowledge Base
+# Knowledge base
 
-El activo real del proyecto. La velocidad de entrega del proyecto N+1 depende
-de lo que quedó escrito en el proyecto N. Alimentarlo no es documentación
-opcional: es la mitad del trabajo.
+The real asset of this project. How fast project N+1 gets delivered depends on
+what was written down during project N. Feeding this is not optional
+documentation: it is half the work.
 
-## Estructura
+## Layout
 
-**`patterns/`** — un archivo por patrón reutilizable. Qué problema resuelve,
-cuándo aplicarlo, el JSON del fragmento, y cómo verificar que funciona.
+**`patterns/`** — one file per reusable pattern. What problem it solves, when to
+apply it, the snippet, and how to verify it works.
 
-**`gotchas/`** — un archivo por servicio o API. Esto es lo que vale oro y lo
-que la competencia no tiene: autenticación y sus trampas, límites de rate y qué
-devuelven cuando se exceden, cómo paginan, qué campos son obligatorios aunque
-la doc diga que no, qué errores son transitorios y cuáles permanentes.
-Una línea por hallazgo, con fecha.
+**`gotchas/`** — one file per service or API. This is what is worth gold and what
+the competition does not have: authentication traps, rate limits and what they
+return when exceeded, how pagination behaves, which fields are mandatory even
+when the docs say otherwise, which errors are transient and which are permanent.
+One line per finding, dated.
 
-**`snippets/`** — código de nodos Code listo para pegar.
+**`snippets/`** — Code-node JavaScript ready to paste. Each one carries its own
+assertions and runs standalone with `node <file>`.
 
-## Regla de mantenimiento
+## Maintenance rule
 
-Al cerrar cada caso o cada trabajo pagado, antes de dar por terminado:
-**toda sorpresa encontrada se escribe acá.** Si algo falló de una manera que no
-estaba documentada, esa es la entrada más valiosa del día.
-
-## Idioma
-
-KB y skill en español: son internos. Lo que ve el cliente, en inglés.
+When closing a case or a paid job, before calling it done: **every surprise
+found gets written down here.** If something failed in a way that was not
+documented anywhere, that is the most valuable entry of the day.

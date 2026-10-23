@@ -1,28 +1,27 @@
 # Dead letter queue
 
-## Qué problema resuelve
+## What problem it solves
 
-Lo que falla después de los reintentos desaparece. Nadie sabe qué entró, ni
-cuántos, ni por qué, ni puede reprocesarlo.
+Whatever fails after the retries disappears. Nobody knows what came in, how
+many, why, or how to replay it.
 
-Medido en el caso-01: la versión naive pierde seis de ocho envíos. El visitante
-ve un `500` genérico y el dato deja de existir. Si el formulario recibe diez
-leads por día y dos fallan, son dos clientes potenciales diarios que nadie ve,
-sin ningún síntoma visible.
+Measured in case-01: the naive version loses six out of eight submissions. The
+visitor sees a generic `500` and the data stops existing. If the form takes ten
+leads a day and two fail, that is two potential customers a day nobody sees,
+with no visible symptom at all.
 
-## Cuándo aplicarlo
+## When to apply it
 
-En todo workflow que escriba en un sistema externo. Si la respuesta del
-servicio puede fallar y el dato de entrada no está guardado en otro lado, hace
-falta una DLQ.
+In every workflow that writes to an external system. If the service's response
+can fail and the input is not stored anywhere else, you need a DLQ.
 
-No hace falta si el origen del dato es recuperable (una tabla que podés volver
-a leer). Sí hace falta si el dato llegó por webhook y es efímero: ese es el
-caso de cualquier formulario.
+You do not need one when the source of the data is replayable (a table you can
+read again). You do need one when the data arrived by webhook and is ephemeral:
+that is any form submission.
 
-## El patrón
+## The pattern
 
-En el nodo que llama al servicio externo:
+On the node that calls the external service:
 
 ```json
 {
@@ -33,27 +32,27 @@ En el nodo que llama al servicio externo:
 }
 ```
 
-`continueErrorOutput` agrega una segunda salida al nodo. La salida 0 es el
-camino feliz; la salida 1 recibe lo que falló después de agotar los reintentos.
-Esa salida va a la DLQ.
+`continueErrorOutput` adds a second output to the node. Output 0 is the happy
+path; output 1 receives whatever failed after exhausting the retries. That
+output goes to the DLQ.
 
-Qué guardar, como mínimo:
+What to store, at minimum:
 
-| Columna | Por qué |
+| Column | Why |
 |---|---|
-| `received_at` | Para ordenar y para saber cuánto hace que está trabado |
-| `email` (o la clave de negocio) | Para buscar sin leer el payload |
-| `payload` | El dato original crudo. Sin esto no podés reprocesar |
-| `error_message` | Qué dijo el servicio |
-| `error_node` | Qué paso falló |
-| `execution_id` | Para abrir la ejecución completa en n8n |
+| `received_at` | To sort, and to know how long it has been stuck |
+| `email` (or the business key) | To search without reading the payload |
+| `payload` | The original raw data. Without it you cannot replay |
+| `error_message` | What the service said |
+| `error_node` | Which step failed |
+| `execution_id` | To open the full run in n8n |
 
-## Dónde guardarla
+## Where to store it
 
-En n8n 2.x, **data tables nativas** (`n8n-nodes-base.dataTable`). Cero
-credenciales externas, cero cuentas que crear, y se consulta desde la API.
+In n8n 2.x, **native data tables** (`n8n-nodes-base.dataTable`). No external
+credentials, no accounts to create, and it is queryable over the API.
 
-Crear la tabla una vez:
+Create the table once:
 
 ```bash
 curl -X POST "$N8N_API_URL/data-tables" \
@@ -68,37 +67,36 @@ curl -X POST "$N8N_API_URL/data-tables" \
         {"name":"workflow_name","type":"string"}]}'
 ```
 
-Google Sheets o Airtable sirven igual y tienen una ventaja: el cliente puede
-mirar la tabla sin entrar a n8n. La desventaja es una credencial más. Para un
-entregable a cliente, preguntar quién va a mirar esa cola.
+Google Sheets or Airtable work just as well and have one advantage: the client
+can look at the queue without going into n8n. The downside is one more
+credential. For a client deliverable, ask who is going to be watching that queue.
 
-**Si la DLQ escribe en una planilla, sanitizar las fórmulas antes.** Un campo
-que arranca con `=` se evalúa al abrir el archivo. Ver
-`kb/snippets/sanitizar-texto.js`.
+**If the DLQ writes to a spreadsheet, sanitize formulas first.** A field starting
+with `=` is evaluated when the file is opened. See `kb/snippets/sanitize-text.js`.
 
-## Lo que la DLQ no arregla
+## What a DLQ does not fix
 
-No mejora un mensaje de error mal redactado por un tercero. En el caso-01, la
-fila guardada dice `Forbidden - perhaps check your credentials?`, que es
-engañoso: el problema era el WAF, no la credencial.
+It does not improve a badly worded error from a third party. In case-01 the
+stored row reads `Forbidden - perhaps check your credentials?`, which is
+misleading: the problem was the WAF, not the credential.
 
-Lo que la DLQ garantiza es que ese error quede **escrito en algún lado** en vez
-de evaporarse. Interpretarlo sigue siendo trabajo humano. Por eso el campo
-`payload` es el más importante de la tabla: con el dato original se puede
-reconstruir qué pasó aunque el mensaje mienta.
+What the DLQ guarantees is that the error is **written down somewhere** instead
+of evaporating. Interpreting it is still human work. That is why `payload` is
+the most important column in the table: with the original data you can
+reconstruct what happened even when the message lies.
 
-## Cómo verificar que funciona
+## How to verify it works
 
-Forzar un fallo real y mirar que la fila aparezca:
+Force a real failure and watch the row appear:
 
 ```bash
-curl -X POST "$N8N_API_URL/../webhook/lead-intake" \
+curl -X POST "http://localhost:5678/webhook/lead-intake" \
   -H 'Content-Type: application/json' \
-  --data-binary @fixtures/06-inyeccion.json
+  --data-binary @fixtures/06-injection.json
 
 curl -H "X-N8N-API-KEY: $N8N_API_KEY" \
   "$N8N_API_URL/data-tables/<id>/rows?limit=5"
 ```
 
-Una DLQ que nunca se probó con un fallo real no es una DLQ: es un nodo que
-nadie ejecutó nunca.
+A DLQ that was never tested against a real failure is not a DLQ: it is a node
+nobody has ever executed.

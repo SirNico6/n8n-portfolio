@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# Dispara fixtures contra un webhook de n8n y muestra codigo HTTP + respuesta.
+# Fires the fixtures at an n8n webhook and prints the HTTP code and response.
 #
-#   ./enviar.sh <webhook-url>              -> manda todos, en orden
-#   ./enviar.sh <webhook-url> 05           -> manda solo el fixture 05
+#   ./send.sh <webhook-url>              -> sends all of them, in order
+#   ./send.sh <webhook-url> 05           -> sends only fixture 05
 #
-# El orden importa: 05 es el duplicado de 01, asi que 01 tiene que haber
-# pasado antes para que la deduplicacion tenga contra que comparar.
+# Order matters: 05 and 05b are duplicates of 01, so 01 has to have gone
+# through first for deduplication to have anything to compare against.
 
 set -u
 URL="${1:-}"
 ONLY="${2:-}"
 
 if [ -z "$URL" ]; then
-  echo "uso: $0 <webhook-url> [numero-de-fixture]" >&2
+  echo "usage: $0 <webhook-url> [fixture-number]" >&2
   exit 1
 fi
 

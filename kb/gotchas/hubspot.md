@@ -1,127 +1,122 @@
 # HubSpot — gotchas
 
-Una línea por hallazgo, con fecha.
+One line per finding, dated.
 
-## 2026-10-23 — El nodo de contactos es upsert, no create
+## 2026-10-23 — The contact node is upsert, not create
 
-El nodo `n8n-nodes-base.hubspot` (v2.2) **no tiene operación "create"** para
-contactos. La única operación de escritura es `upsert` ("Create or Update"):
-crea el contacto, o actualiza el existente si el email ya está.
+The `n8n-nodes-base.hubspot` node (v2.2) has **no "create" operation** for
+contacts. The only write operation is `upsert` ("Create or Update"): it creates
+the contact, or updates the existing one if the email is already there.
 
-Tres consecuencias que cambian cómo se diseña el workflow:
+Three consequences that change how the workflow is designed:
 
-1. **HubSpot ya deduplica por email.** No hace falta deduplicar el contacto en
-   sí. Pero eso engaña: el workflow puede seguir disparando efectos
-   secundarios duplicados (notificaciones, tareas, deals, filas de log). El
-   daño de un doble submit no es el contacto repetido, es que el equipo
-   comercial llama dos veces al mismo lead.
+1. **HubSpot already dedupes by email.** You do not need to deduplicate the
+   contact itself. But that is deceptive: the workflow can still fire duplicate
+   side effects — notifications, tasks, deals, log rows. The damage from a
+   double submit is not the repeated contact, it is the sales team calling the
+   same lead twice.
 
-2. **El upsert pisa datos en silencio.** Si el mismo email vuelve a entrar con
-   campos vacíos o peores, HubSpot actualiza el contacto existente y se pierde
-   lo que había. No falla, no avisa. Es pérdida de datos invisible.
+2. **Upsert overwrites data silently.** If the same email comes back in with
+   empty or worse fields, HubSpot updates the existing contact and what was
+   there is lost. No failure, no warning. Invisible data loss.
 
-3. **La deduplicación es por string exacto de email.** `lucia@example.com`,
-   `  LUCIA@Example.com  ` y `lucia@example.com ` son tres contactos distintos
-   para HubSpot. **Normalizar el email es responsabilidad del workflow.** Si no
-   se hace, el CRM duplica aunque tenga deduplicación incorporada — y el
-   cliente culpa al CRM.
+3. **Deduplication is on the exact email string.** `lucia@example.com`,
+   `  LUCIA@Example.com  ` and `lucia@example.com ` are three different contacts
+   to HubSpot. **Normalizing the email is the workflow's job.** Skip it and the
+   CRM duplicates despite having deduplication built in — and the client blames
+   the CRM.
 
-El campo `email` es el único obligatorio. El resto va en `additionalFields`.
+`email` is the only required field. Everything else goes in `additionalFields`.
 
-## 2026-10-23 — Autenticación: usar appToken
+## 2026-10-23 — Authentication: use appToken
 
-El nodo ofrece tres modos: `apiKey`, `appToken`, `oAuth2`. Las API keys de
-HubSpot están discontinuadas. Para una integración propia, `appToken` (private
-app token) es el camino: se genera en Settings → Integrations → Private Apps,
-da un token directo y evita el baile de OAuth. Scopes mínimos para este caso:
-`crm.objects.contacts.read` y `crm.objects.contacts.write`.
+The node offers three modes: `apiKey`, `appToken`, `oAuth2`. HubSpot API keys
+are discontinued. For your own integration, `appToken` is the way: it takes a
+direct token and skips the OAuth dance. Minimum scopes for this case:
+`crm.objects.contacts.read` and `crm.objects.contacts.write`.
 
-## 2026-10-23 — Las private apps murieron: ahora son "service keys"
+## 2026-10-23 — Private apps are gone: it is "service keys" now
 
-Una cuenta de HubSpot creada hoy **no puede crear private apps**. La pantalla
-de Legacy Apps dice textual: *"Legacy apps aren't available on this account.
-Service keys and project-based apps have replaced legacy apps."*
+A HubSpot account created today **cannot create private apps**. The Legacy Apps
+screen says it verbatim: *"Legacy apps aren't available on this account. Service
+keys and project-based apps have replaced legacy apps."*
 
-Fechas del corte: creación de private apps termina el 28/09/2026 para cuentas
-nuevas y el 26/10/2026 para las existentes. Las private apps ya creadas
-siguen funcionando.
+Cutoff dates: private app creation ended 28 Sep 2026 for new accounts and
+26 Oct 2026 for existing ones. Already-created private apps keep working.
 
-**Dónde se crean ahora:** Development → Keys → Service Keys. No está en
-Settings → Integrations, que es donde lo pone toda la documentación y todos
-los tutoriales que vas a encontrar.
+**Where they live now:** Development → Keys → Service Keys. Not under
+Settings → Integrations, which is where every tutorial and every piece of
+documentation you will find still points.
 
-**Lo que importa para n8n:** la service key es un Bearer token, igual que el
-private app token. Va en la credencial **App Token** del nodo de HubSpot, sin
-cambiar nada más. n8n ya la lista como la opción recomendada.
+**What matters for n8n:** a service key is a Bearer token, exactly like a private
+app token. It goes in the node's **App Token** credential with nothing else
+changed. n8n already lists it as the recommended option.
 
-**Limitación que hay que saber antes de prometerle algo a un cliente:** las
-service keys **no soportan webhooks**. Sirven para llamar a la API de HubSpot
-desde tu código. Si el cliente necesita que HubSpot le avise de un evento
-(contacto creado, deal movido), hace falta una project-based app, que es otro
-mecanismo y otro setup.
+**Limitation to know before promising anything to a client:** service keys
+**do not support webhooks**. They are for calling HubSpot's API from your own
+code. If the client needs HubSpot to notify them of an event (contact created,
+deal moved), that requires a project-based app, which is a different mechanism
+and a different setup.
 
-**Scopes:** una service key solo puede recibir scopes que ya tenga quien la
-crea. Para escribir contactos alcanzan `crm.objects.contacts.read` y
-`crm.objects.contacts.write`. Las variantes `sensitive.read` y
-`highly_sensitive.read` no hacen falta y vienen con advertencia: no tildarlas.
+**Scopes:** a service key can only receive scopes the creator already holds. For
+writing contacts, `crm.objects.contacts.read` and `crm.objects.contacts.write`
+are enough. The `sensitive.read` and `highly_sensitive.read` variants are not
+needed and come with a warning: leave them unchecked.
 
-**Estado:** service keys seguían en beta pública en las notas de release de
-HubSpot del otoño 2026. Verificar antes de apoyarse en esto para un cliente.
+**Status:** service keys were still in public beta as of HubSpot's Fall 2026
+developer release notes. Verify before relying on this for a client.
 
-### Verificado en vivo (2026-10-23)
+### Verified live (2026-10-23)
 
-La service key emitida hoy tiene **prefijo `pat-` y 44 caracteres**: el mismo
-formato que un private app token. Por eso la credencial App Token de n8n la
-toma sin cambios.
+A service key issued today has a **`pat-` prefix and 44 characters**: the same
+format as a private app token. That is why n8n's App Token credential accepts it
+unchanged.
 
-Probada contra la API real:
+Tested against the real API:
 
 ```bash
 curl -H "Authorization: Bearer $HUBSPOT_SERVICE_KEY" \
   "https://api.hubapi.com/crm/v3/objects/contacts?limit=2&properties=email,firstname,lastname"
-# HTTP 200, devuelve los contactos
+# HTTP 200, returns the contacts
 ```
 
-Ese curl es la forma rápida de descartar la credencial como causa cuando un
-workflow falla: si el curl da 200 y el nodo falla igual, el problema está en
-el nodo, no en la key.
+That curl is the fast way to rule the credential out when a workflow fails: if
+the curl returns 200 and the node still fails, the problem is in the node, not
+the key.
 
-## 2026-10-23 — El mensaje de "email inválido" recorta los espacios
+## 2026-10-23 — The "invalid email" message trims the whitespace away
 
-Si se manda un email con espacios al principio o al final, HubSpot lo rechaza
-con `Property values were not valid`, y el mensaje dice:
+Send an email with leading or trailing whitespace and HubSpot rejects it with
+`Property values were not valid`, and the message reads:
 
     Email address LUCIA.BENITEZ@Example.COM is invalid
 
-**sin los espacios.** O sea: muestra un email sintácticamente válido y lo
-declara inválido. La causa real —el espacio— no aparece en ningún lado del
-error.
+**without the whitespace.** It shows you a syntactically valid email and calls it
+invalid. The actual cause — the space — appears nowhere in the error.
 
-Consecuencia práctica: cuando un cliente reporta "HubSpot dice que el email es
-inválido y el email está bien", el primer sospechoso es whitespace. Pedirle el
-payload crudo, no lo que ve en pantalla.
+Practical consequence: when a client reports "HubSpot says the email is invalid
+and the email is fine", whitespace is the first suspect. Ask for the raw
+payload, not for what they see on screen.
 
-Las mayúsculas **no** son el problema: HubSpot acepta mayúsculas en el email.
-Solo molesta el whitespace.
+Capitals are **not** the problem: HubSpot accepts them. Only whitespace breaks it.
 
-## 2026-10-23 — "Forbidden - check your credentials" puede ser Cloudflare, no auth
+## 2026-10-23 — "Forbidden - check your credentials" can be Cloudflare, not auth
 
-Un payload con `<script>`, `onerror=` o SQL en campos de texto no lo rechaza la
-API de HubSpot: lo bloquea **Cloudflare en el borde**, antes de llegar.
+A payload containing `<script>`, `onerror=` or SQL in its text fields is not
+rejected by HubSpot's API: it is blocked by **Cloudflare at the edge**, before it
+gets there.
 
-Lo que n8n muestra:
+What n8n shows:
 
     Forbidden - perhaps check your credentials?
 
-y en el detalle, una página HTML completa (`<!DOCTYPE html>` con clases `ie6
-oldie`, la plantilla clásica de bloqueo de Cloudflare).
+and in the detail, a full HTML page (`<!DOCTYPE html>` with `ie6 oldie` classes,
+the classic Cloudflare block template).
 
-**La credencial no tiene nada que ver.** Es el contenido del payload.
+**The credential has nothing to do with it.** It is the payload content.
 
-Cómo distinguirlo en treinta segundos: si el cuerpo del error es HTML en vez de
-JSON, no es la API de HubSpot hablando. Es el WAF. Ninguna API de HubSpot
-devuelve HTML.
+How to tell in thirty seconds: if the error body is HTML instead of JSON, that
+is not HubSpot's API talking. It is the WAF. No HubSpot API returns HTML.
 
-Esto hace doble trabajo en el caso-01: justifica sanitizar la entrada (que es
-lo que se vende) y además es el error más caro de diagnosticar de todos los
-medidos.
+This does double duty in case-01: it justifies sanitizing input (which is what
+gets sold) and it is the most expensive error to diagnose of everything measured.

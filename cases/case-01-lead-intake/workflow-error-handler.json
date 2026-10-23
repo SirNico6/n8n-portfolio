@@ -1,9 +1,9 @@
 {
-  "name": "caso-01 - manejo de errores",
+  "name": "case-01 · error handler",
   "nodes": [
     {
       "id": "cccc1111-1111-4111-8111-111111111111",
-      "name": "Cuando falla un workflow",
+      "name": "When a workflow fails",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
       "position": [
@@ -14,7 +14,7 @@
     },
     {
       "id": "cccc2222-2222-4222-8222-222222222222",
-      "name": "Armar la alerta",
+      "name": "Build the alert",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -24,12 +24,12 @@
       "parameters": {
         "mode": "runOnceForAllItems",
         "language": "javaScript",
-        "jsCode": "// Arma la alerta a partir del payload del Error Trigger.\n// Incluye link directo a la ejecucion: sin eso, el que recibe la alerta\n// tiene que buscar a mano en n8n y no lo hace.\n\nconst e = $json.execution ?? {};\nconst w = $json.workflow ?? {};\n\nconst lineas = [\n  'Fallo el workflow: ' + (w.name ?? 'desconocido'),\n  'Nodo: ' + (e.lastNodeExecuted ?? 'desconocido'),\n  'Error: ' + (e.error?.message ?? 'sin mensaje'),\n  'Ejecucion: ' + (e.id ?? '?'),\n];\nif (e.url) lineas.push('Abrir: ' + e.url);\n\nreturn [{\n  json: {\n    alerta: lineas.join('\\n'),\n    execution_id: String(e.id ?? ''),\n    workflow_name: w.name ?? '',\n    error_message: e.error?.message ?? 'sin mensaje',\n    error_node: e.lastNodeExecuted ?? 'desconocido',\n    payload: JSON.stringify($json).slice(0, 8000),\n  },\n}];\n"
+        "jsCode": "// Builds the alert from the Error Trigger payload.\n// Includes a direct link to the failed execution: without it, whoever receives\n// the alert has to hunt for it in n8n, and they won't.\n\nconst e = $json.execution ?? {};\nconst w = $json.workflow ?? {};\n\nconst lines = [\n  'Workflow failed: ' + (w.name ?? 'unknown'),\n  'Node: ' + (e.lastNodeExecuted ?? 'unknown'),\n  'Error: ' + (e.error?.message ?? 'no message'),\n  'Execution: ' + (e.id ?? '?'),\n];\nif (e.url) lines.push('Open: ' + e.url);\n\nreturn [{\n  json: {\n    alert: lines.join('\\n'),\n    execution_id: String(e.id ?? ''),\n    workflow_name: w.name ?? '',\n    error_message: e.error?.message ?? 'no message',\n    error_node: e.lastNodeExecuted ?? 'unknown',\n    payload: JSON.stringify($json).slice(0, 8000),\n  },\n}];\n"
       }
     },
     {
       "id": "cccc3333-3333-4333-8333-333333333333",
-      "name": "Registrar el fallo",
+      "name": "Log the failure",
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
@@ -41,7 +41,7 @@
         "operation": "insert",
         "dataTableId": {
           "__rl": true,
-          "value": "W8yrbsUnaw9DEKXT",
+          "value": "REPLACE_WITH_YOUR_DATA_TABLE_ID",
           "mode": "id"
         },
         "columns": {
@@ -49,7 +49,7 @@
           "matchingColumns": [],
           "value": {
             "received_at": "={{ $now.toISO() }}",
-            "email": "(fallo no controlado)",
+            "email": "(unhandled failure)",
             "payload": "={{ $json.payload }}",
             "error_message": "={{ $json.error_message }}",
             "error_node": "={{ $json.error_node }}",
@@ -127,19 +127,18 @@
     },
     {
       "id": "cccc4444-4444-4444-8444-444444444444",
-      "name": "Avisar al equipo",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
+      "name": "Notify the team",
       "position": [
         180,
         -120
       ],
-      "disabled": true,
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
       "parameters": {
         "resource": "message",
         "operation": "sendMessage",
-        "chatId": "REEMPLAZAR_CHAT_ID",
-        "text": "={{ $json.alerta }}",
+        "chatId": "REPLACE_WITH_YOUR_CHAT_ID",
+        "text": "={{ $json.alert }}",
         "additionalFields": {
           "appendAttribution": false
         }
@@ -147,27 +146,27 @@
     }
   ],
   "connections": {
-    "Cuando falla un workflow": {
+    "When a workflow fails": {
       "main": [
         [
           {
-            "node": "Armar la alerta",
+            "node": "Build the alert",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Armar la alerta": {
+    "Build the alert": {
       "main": [
         [
           {
-            "node": "Avisar al equipo",
+            "node": "Notify the team",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Registrar el fallo",
+            "node": "Log the failure",
             "type": "main",
             "index": 0
           }
