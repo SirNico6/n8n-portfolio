@@ -1,0 +1,179 @@
+{
+  "name": "caso-01 - manejo de errores",
+  "nodes": [
+    {
+      "id": "cccc1111-1111-4111-8111-111111111111",
+      "name": "Cuando falla un workflow",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "cccc2222-2222-4222-8222-222222222222",
+      "name": "Armar la alerta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -60,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Arma la alerta a partir del payload del Error Trigger.\n// Incluye link directo a la ejecucion: sin eso, el que recibe la alerta\n// tiene que buscar a mano en n8n y no lo hace.\n\nconst e = $json.execution ?? {};\nconst w = $json.workflow ?? {};\n\nconst lineas = [\n  'Fallo el workflow: ' + (w.name ?? 'desconocido'),\n  'Nodo: ' + (e.lastNodeExecuted ?? 'desconocido'),\n  'Error: ' + (e.error?.message ?? 'sin mensaje'),\n  'Ejecucion: ' + (e.id ?? '?'),\n];\nif (e.url) lineas.push('Abrir: ' + e.url);\n\nreturn [{\n  json: {\n    alerta: lineas.join('\\n'),\n    execution_id: String(e.id ?? ''),\n    workflow_name: w.name ?? '',\n    error_message: e.error?.message ?? 'sin mensaje',\n    error_node: e.lastNodeExecuted ?? 'desconocido',\n    payload: JSON.stringify($json).slice(0, 8000),\n  },\n}];\n"
+      }
+    },
+    {
+      "id": "cccc3333-3333-4333-8333-333333333333",
+      "name": "Registrar el fallo",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        180,
+        80
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "W8yrbsUnaw9DEKXT",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "value": {
+            "received_at": "={{ $now.toISO() }}",
+            "email": "(fallo no controlado)",
+            "payload": "={{ $json.payload }}",
+            "error_message": "={{ $json.error_message }}",
+            "error_node": "={{ $json.error_node }}",
+            "execution_id": "={{ $json.execution_id }}",
+            "workflow_name": "={{ $json.workflow_name }}"
+          },
+          "schema": [
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "payload",
+              "displayName": "payload",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "error_message",
+              "displayName": "error_message",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "error_node",
+              "displayName": "error_node",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "execution_id",
+              "displayName": "execution_id",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "workflow_name",
+              "displayName": "workflow_name",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "cccc4444-4444-4444-8444-444444444444",
+      "name": "Avisar al equipo",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        180,
+        -120
+      ],
+      "disabled": true,
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "REEMPLAZAR_CHAT_ID",
+        "text": "={{ $json.alerta }}",
+        "additionalFields": {}
+      }
+    }
+  ],
+  "connections": {
+    "Cuando falla un workflow": {
+      "main": [
+        [
+          {
+            "node": "Armar la alerta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar la alerta": {
+      "main": [
+        [
+          {
+            "node": "Avisar al equipo",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar el fallo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
