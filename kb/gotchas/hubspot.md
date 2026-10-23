@@ -85,3 +85,43 @@ curl -H "Authorization: Bearer $HUBSPOT_SERVICE_KEY" \
 Ese curl es la forma rápida de descartar la credencial como causa cuando un
 workflow falla: si el curl da 200 y el nodo falla igual, el problema está en
 el nodo, no en la key.
+
+## 2026-10-23 — El mensaje de "email inválido" recorta los espacios
+
+Si se manda un email con espacios al principio o al final, HubSpot lo rechaza
+con `Property values were not valid`, y el mensaje dice:
+
+    Email address LUCIA.BENITEZ@Example.COM is invalid
+
+**sin los espacios.** O sea: muestra un email sintácticamente válido y lo
+declara inválido. La causa real —el espacio— no aparece en ningún lado del
+error.
+
+Consecuencia práctica: cuando un cliente reporta "HubSpot dice que el email es
+inválido y el email está bien", el primer sospechoso es whitespace. Pedirle el
+payload crudo, no lo que ve en pantalla.
+
+Las mayúsculas **no** son el problema: HubSpot acepta mayúsculas en el email.
+Solo molesta el whitespace.
+
+## 2026-10-23 — "Forbidden - check your credentials" puede ser Cloudflare, no auth
+
+Un payload con `<script>`, `onerror=` o SQL en campos de texto no lo rechaza la
+API de HubSpot: lo bloquea **Cloudflare en el borde**, antes de llegar.
+
+Lo que n8n muestra:
+
+    Forbidden - perhaps check your credentials?
+
+y en el detalle, una página HTML completa (`<!DOCTYPE html>` con clases `ie6
+oldie`, la plantilla clásica de bloqueo de Cloudflare).
+
+**La credencial no tiene nada que ver.** Es el contenido del payload.
+
+Cómo distinguirlo en treinta segundos: si el cuerpo del error es HTML en vez de
+JSON, no es la API de HubSpot hablando. Es el WAF. Ninguna API de HubSpot
+devuelve HTML.
+
+Esto hace doble trabajo en el caso-01: justifica sanitizar la entrada (que es
+lo que se vende) y además es el error más caro de diagnosticar de todos los
+medidos.
