@@ -1,0 +1,23 @@
+# Secretos — nunca se commitean
+.env
+.env.local
+*.key
+*.pem
+credentials.json
+
+# Exports de n8n que puedan arrastrar credenciales
+*-with-credentials.json
+exports-raw/
+
+# Datos locales de n8n
+.n8n/
+n8n-data/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# SO
+Thumbs.db
+desktop.ini
+.DS_Store
