@@ -1,0 +1,10 @@
+{
+  "first_name": "<script>alert('xss')</script>",
+  "last_name": "Robert'); DROP TABLE leads;--",
+  "email": "injection.test@example.com",
+  "phone": "+59899777888",
+  "company": "=HYPERLINK(\"http://evil.example.com\",\"click\")",
+  "message": "<img src=x onerror=alert(1)> plus a normal sentence so the record still looks plausible.",
+  "source": "website-contact-form",
+  "submitted_at": "2026-10-23T14:15:30Z"
+}
