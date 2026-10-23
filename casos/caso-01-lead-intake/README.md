@@ -160,5 +160,7 @@ Dichas de frente, porque un entregable que no las dice no es honesto:
   hay que cambiar la clave.
 - **El historial de deduplicación vive en el workflow.** Si se borra el
   workflow, se pierde. Para retención larga va contra una tabla.
-- **El `docker-compose.yml` no se ejecutó todavía.** Ver la nota en el README
-  del repo.
+- **Las credenciales son por instancia.** Levantar el repo en una máquina nueva
+  importa los workflows pero no las credenciales: hay que volver a cargar el
+  service key de HubSpot y el token de Telegram. Es así por diseño — las
+  credenciales nunca viajan en el repo.

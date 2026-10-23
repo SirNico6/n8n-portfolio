@@ -43,11 +43,11 @@ cp .env.example .env
 docker compose up -d
 ```
 
-> **Nota honesta:** el `docker-compose.yml` está escrito con la versión de
-> imagen fijada y verificada en Docker Hub, pero **todavía no se ejecutó**: la
-> máquina donde se construyó este repo no tiene Docker. La ruta probada de
-> punta a punta es la de Node, abajo. Cuando se pruebe el compose, esta nota se
-> borra.
+Verificado el 23/10/2026 contra Docker 29.9.2 sobre WSL2: la imagen baja, el
+contenedor levanta, `/healthz` responde `200`, las variables del `.env` llegan
+adentro del contenedor y el volumen de `casos/` queda montado. Los tres
+workflows importan por API y la ruta de validación devuelve los mismos códigos
+que la instalación por Node.
 
 ### Con Node
 
