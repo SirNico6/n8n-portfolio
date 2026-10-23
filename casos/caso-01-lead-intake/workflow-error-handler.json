@@ -140,7 +140,9 @@
         "operation": "sendMessage",
         "chatId": "REEMPLAZAR_CHAT_ID",
         "text": "={{ $json.alerta }}",
-        "additionalFields": {}
+        "additionalFields": {
+          "appendAttribution": false
+        }
       }
     }
   ],

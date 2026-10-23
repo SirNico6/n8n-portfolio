@@ -6,7 +6,10 @@
       "name": "Formulario web",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.2,
-      "position": [-220, 0],
+      "position": [
+        -220,
+        0
+      ],
       "webhookId": "aaaa1111-1111-4111-8111-111111111111",
       "parameters": {
         "httpMethod": "POST",
@@ -20,18 +23,51 @@
       "name": "Mapear campos",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.5,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "parameters": {
         "mode": "manual",
         "includeOtherFields": false,
         "assignments": {
           "assignments": [
-            { "id": "f1", "name": "email", "value": "={{ $json.body.email }}", "type": "string" },
-            { "id": "f2", "name": "first_name", "value": "={{ $json.body.first_name }}", "type": "string" },
-            { "id": "f3", "name": "last_name", "value": "={{ $json.body.last_name }}", "type": "string" },
-            { "id": "f4", "name": "phone", "value": "={{ $json.body.phone }}", "type": "string" },
-            { "id": "f5", "name": "company", "value": "={{ $json.body.company }}", "type": "string" },
-            { "id": "f6", "name": "message", "value": "={{ $json.body.message }}", "type": "string" }
+            {
+              "id": "f1",
+              "name": "email",
+              "value": "={{ $json.body.email }}",
+              "type": "string"
+            },
+            {
+              "id": "f2",
+              "name": "first_name",
+              "value": "={{ $json.body.first_name }}",
+              "type": "string"
+            },
+            {
+              "id": "f3",
+              "name": "last_name",
+              "value": "={{ $json.body.last_name }}",
+              "type": "string"
+            },
+            {
+              "id": "f4",
+              "name": "phone",
+              "value": "={{ $json.body.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "f5",
+              "name": "company",
+              "value": "={{ $json.body.company }}",
+              "type": "string"
+            },
+            {
+              "id": "f6",
+              "name": "message",
+              "value": "={{ $json.body.message }}",
+              "type": "string"
+            }
           ]
         },
         "options": {}
@@ -42,7 +78,10 @@
       "name": "Crear contacto en HubSpot",
       "type": "n8n-nodes-base.hubspot",
       "typeVersion": 2.2,
-      "position": [220, 0],
+      "position": [
+        220,
+        0
+      ],
       "parameters": {
         "authentication": "appToken",
         "resource": "contact",
@@ -63,20 +102,57 @@
       "name": "Avisar al equipo",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [440, 0],
+      "position": [
+        440,
+        0
+      ],
       "parameters": {
         "resource": "message",
         "operation": "sendMessage",
         "chatId": "REEMPLAZAR_CHAT_ID",
         "text": "=Nuevo lead: {{ $('Mapear campos').item.json.first_name }} {{ $('Mapear campos').item.json.last_name }} — {{ $('Mapear campos').item.json.email }} — {{ $('Mapear campos').item.json.company }}",
-        "additionalFields": {}
+        "additionalFields": {
+          "appendAttribution": false
+        }
       }
     }
   ],
   "connections": {
-    "Formulario web": { "main": [[{ "node": "Mapear campos", "type": "main", "index": 0 }]] },
-    "Mapear campos": { "main": [[{ "node": "Crear contacto en HubSpot", "type": "main", "index": 0 }]] },
-    "Crear contacto en HubSpot": { "main": [[{ "node": "Avisar al equipo", "type": "main", "index": 0 }]] }
+    "Formulario web": {
+      "main": [
+        [
+          {
+            "node": "Mapear campos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear campos": {
+      "main": [
+        [
+          {
+            "node": "Crear contacto en HubSpot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear contacto en HubSpot": {
+      "main": [
+        [
+          {
+            "node": "Avisar al equipo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1"
+  }
 }

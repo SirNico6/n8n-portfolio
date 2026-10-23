@@ -160,7 +160,9 @@
         "operation": "sendMessage",
         "chatId": "REEMPLAZAR_CHAT_ID",
         "text": "=Nuevo lead: {{ $('Normalizar y validar').item.json.lead.first_name }} {{ $('Normalizar y validar').item.json.lead.last_name }} - {{ $('Normalizar y validar').item.json.lead.email }}",
-        "additionalFields": {}
+        "additionalFields": {
+          "appendAttribution": false
+        }
       }
     },
     {
