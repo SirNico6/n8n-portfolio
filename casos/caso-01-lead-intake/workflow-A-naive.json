@@ -1,0 +1,82 @@
+{
+  "name": "caso-01 · A naive · lead intake",
+  "nodes": [
+    {
+      "id": "aaaa1111-1111-4111-8111-111111111111",
+      "name": "Formulario web",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [-220, 0],
+      "webhookId": "aaaa1111-1111-4111-8111-111111111111",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-intake-naive",
+        "responseMode": "lastNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "aaaa2222-2222-4222-8222-222222222222",
+      "name": "Mapear campos",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [0, 0],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            { "id": "f1", "name": "email", "value": "={{ $json.body.email }}", "type": "string" },
+            { "id": "f2", "name": "first_name", "value": "={{ $json.body.first_name }}", "type": "string" },
+            { "id": "f3", "name": "last_name", "value": "={{ $json.body.last_name }}", "type": "string" },
+            { "id": "f4", "name": "phone", "value": "={{ $json.body.phone }}", "type": "string" },
+            { "id": "f5", "name": "company", "value": "={{ $json.body.company }}", "type": "string" },
+            { "id": "f6", "name": "message", "value": "={{ $json.body.message }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "aaaa3333-3333-4333-8333-333333333333",
+      "name": "Crear contacto en HubSpot",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [220, 0],
+      "parameters": {
+        "authentication": "appToken",
+        "resource": "contact",
+        "operation": "upsert",
+        "email": "={{ $json.email }}",
+        "additionalFields": {
+          "firstName": "={{ $json.first_name }}",
+          "lastName": "={{ $json.last_name }}",
+          "phoneNumber": "={{ $json.phone }}",
+          "companyName": "={{ $json.company }}",
+          "message": "={{ $json.message }}"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "aaaa4444-4444-4444-8444-444444444444",
+      "name": "Avisar al equipo",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [440, 0],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "REEMPLAZAR_CHAT_ID",
+        "text": "=Nuevo lead: {{ $('Mapear campos').item.json.first_name }} {{ $('Mapear campos').item.json.last_name }} — {{ $('Mapear campos').item.json.email }} — {{ $('Mapear campos').item.json.company }}",
+        "additionalFields": {}
+      }
+    }
+  ],
+  "connections": {
+    "Formulario web": { "main": [[{ "node": "Mapear campos", "type": "main", "index": 0 }]] },
+    "Mapear campos": { "main": [[{ "node": "Crear contacto en HubSpot", "type": "main", "index": 0 }]] },
+    "Crear contacto en HubSpot": { "main": [[{ "node": "Avisar al equipo", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

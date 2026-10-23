@@ -18,7 +18,7 @@ fi
 
 cd "$(dirname "$0")"
 
-for f in $(ls [0-9][0-9]-*.json | sort); do
+for f in $(ls [0-9][0-9]*.json | sort); do
   n="${f%%-*}"
   if [ -n "$ONLY" ] && [ "$n" != "$ONLY" ]; then
     continue
