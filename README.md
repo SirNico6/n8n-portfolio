@@ -16,15 +16,27 @@ diagram. It's in the results table.
 | Case | What it solves | Status |
 |---|---|---|
 | [case-01 · lead intake](cases/case-01-lead-intake/) | Capturing web form leads into a CRM without losing any | Running and measured |
+| [case-02 · API sync](cases/case-02-api-sync/) | A scheduled sync that reports success while delivering 8% of the data | Running and measured |
 
-## Case 01 result, in one line
+## The results, in one line each
 
-The same eight payloads against both versions:
+**Case 01 — the loud failure.** The same eight realistic payloads against both
+versions: the naive one ends six of eight in a generic `HTTP 500` and the lead
+disappears without a trace. The hardened one returns no `500` at all, names the
+field and the reason on every rejection, and keeps whatever still fails in a
+replay queue.
+[Full breakdown](cases/case-01-lead-intake/results-A-vs-B.md).
 
-- **A:** six out of eight end in a generic `HTTP 500`. The lead disappears with no trace.
-- **B:** no `500` at all. Every rejection names the field and the reason, and whatever still fails lands in a replay queue.
+**Case 02 — the silent one.** A sync that never failed and never collected more
+than 8% of its data: 30 of 355 records, 60 duplicate rows in three runs, and 90
+log entries all reading success. The fixed version collects 355 of 355 and
+refuses to write when it cannot verify that.
+[Full breakdown](cases/case-02-api-sync/results-A-vs-B.md) ·
+[the diagnosis a client receives](cases/case-02-api-sync/diagnosis/diagnosis-report.md).
 
-Full breakdown: [results-A-vs-B.md](cases/case-01-lead-intake/results-A-vs-B.md).
+Case 02 also opens with a measurement of the 40 most popular public n8n
+templates: four have any retry configured, none has an error workflow, and of
+the 23 that call an API, one handles pagination.
 
 ## Running it
 
