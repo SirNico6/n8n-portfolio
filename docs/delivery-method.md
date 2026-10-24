@@ -1,9 +1,8 @@
----
-name: n8n-delivery
-description: How work is built and delivered in this repo. n8n workflow conventions, delivery checklist, client documentation structure and quoting rule. Use before building or handing over any workflow.
----
+# How this work is built and delivered
 
-# n8n delivery
+The conventions, delivery checklist and quoting rule used across the cases in
+this repo. Published as part of the portfolio: it is how the work is done, not
+just what was produced.
 
 This is not knowledge about n8n — that lives in `kb/`. This is **how the work is
 done here**.

@@ -1,0 +1,542 @@
+{
+  "name": "case-02 · B robust · contributor sync",
+  "nodes": [
+    {
+      "id": "ca02b001-0001-4001-8001-000000000001",
+      "name": "Every morning",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -720,
+        -80
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ca02b001-0002-4002-8002-000000000002",
+      "name": "Run now",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -720,
+        100
+      ],
+      "webhookId": "ca02b001-0002-4002-8002-000000000002",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sync-contributors",
+        "responseMode": "lastNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "ca02b001-0003-4003-8003-000000000003",
+      "name": "Measure the source",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -480,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "parameters": {
+        "url": "https://api.github.com/repos/n8n-io/n8n-docs/contributors",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "per_page",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ca02b001-0004-4004-8004-000000000004",
+      "name": "Fetch every page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -240,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "parameters": {
+        "url": "https://api.github.com/repos/n8n-io/n8n-docs/contributors",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "per_page",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "paginationMode": "updateAParameterInEachRequest",
+              "parameters": {
+                "parameters": [
+                  {
+                    "type": "qs",
+                    "name": "page",
+                    "value": "={{ $pageCount + 1 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "responseIsEmpty",
+              "limitPagesFetched": true,
+              "maxRequests": 25,
+              "requestInterval": 250
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ca02b001-0005-4005-8005-000000000005",
+      "name": "Normalize and verify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Normalizes the fetched records and ASSERTS that we got all of them.\n//\n// This assertion is the whole point of the rescue. Every other fix still leaves\n// you trusting that the sync is healthy because nothing errored — and it was\n// never erroring. A sync that silently returns 8% of the data has to be as\n// noisy as one that crashes.\n\n// The source total, taken from the Link header of a per_page=1 probe.\n// With one item per page, the last page number IS the record count.\nconst probe = $('Measure the source').first().json;\nconst linkHeader = (probe.headers && (probe.headers.link || probe.headers.Link)) || '';\nconst lastMatch = linkHeader.match(/[?&]page=(\\d+)>;\\s*rel=\"last\"/);\nconst expected = lastMatch ? Number(lastMatch[1]) : null;\n\n// Deduplicate within the batch on a stable key, so a record appearing on a\n// page boundary twice does not count twice.\nconst seen = new Map();\nfor (const item of $input.all()) {\n  const r = item.json;\n  if (!r || !r.login) continue;\n  if (!seen.has(r.login)) {\n    seen.set(r.login, {\n      login: String(r.login),\n      github_id: String(r.id ?? ''),\n      contributions: Number(r.contributions ?? 0),\n      synced_at: new Date().toISOString(),\n    });\n  }\n}\n\nconst fetched = seen.size;\nconst pages = Math.max(1, Math.ceil(fetched / 100));\n\n// No Link header means a single page: expected equals what we got.\nconst target = expected === null ? fetched : expected;\nconst complete = fetched >= target;\n\nconst summary = {\n  complete,\n  expected: target,\n  fetched,\n  missing: Math.max(0, target - fetched),\n  pages,\n  note: complete\n    ? 'retrieved ' + fetched + ' of ' + target + ' records'\n    : 'INCOMPLETE: retrieved ' + fetched + ' of ' + target + ', missing ' + (target - fetched),\n};\n\n// One item per record, each carrying the run summary so the logging step can\n// read it without recomputing. If nothing came back at all, still emit one\n// item so the assertion downstream can fail loudly instead of the workflow\n// quietly ending with zero items.\nif (!seen.size) return [{ json: { _summary: summary, _empty: true } }];\nreturn [...seen.values()].map((rec) => ({ json: { ...rec, _summary: summary } }));\n"
+      }
+    },
+    {
+      "id": "ca02b001-0006-4006-8006-000000000006",
+      "name": "Did we get everything?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "complete",
+              "leftValue": "={{ $json._summary.complete }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ca02b001-0007-4007-8007-000000000007",
+      "name": "Upsert contributors",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        -140
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "parameters": {
+        "resource": "row",
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_CONTRIBUTORS_TABLE_ID",
+          "mode": "id"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "login",
+              "condition": "eq",
+              "keyValue": "={{ $json.login }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "login"
+          ],
+          "value": {
+            "login": "={{ $json.login }}",
+            "github_id": "={{ $json.github_id }}",
+            "contributions": "={{ $json.contributions }}",
+            "synced_at": "={{ $json.synced_at }}"
+          },
+          "schema": [
+            {
+              "id": "login",
+              "displayName": "login",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "github_id",
+              "displayName": "github_id",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "contributions",
+              "displayName": "contributions",
+              "type": "number",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "synced_at",
+              "displayName": "synced_at",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ca02b001-0008-4008-8008-000000000008",
+      "name": "Log the run once",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        -140
+      ],
+      "executeOnce": true,
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_SYNC_RUNS_TABLE_ID",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "value": {
+            "run_at": "={{ $now.toISO() }}",
+            "workflow": "={{ $workflow.name }}",
+            "records_fetched": "={{ $('Normalize and verify').first().json._summary.fetched }}",
+            "pages_fetched": "={{ $('Normalize and verify').first().json._summary.pages }}",
+            "status": "success",
+            "note": "={{ $('Normalize and verify').first().json._summary.note }}"
+          },
+          "schema": [
+            {
+              "id": "run_at",
+              "displayName": "run_at",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "workflow",
+              "displayName": "workflow",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "records_fetched",
+              "displayName": "records_fetched",
+              "type": "number",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "pages_fetched",
+              "displayName": "pages_fetched",
+              "type": "number",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "note",
+              "displayName": "note",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ca02b001-0009-4009-8009-000000000009",
+      "name": "Log the shortfall",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        160
+      ],
+      "executeOnce": true,
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_SYNC_RUNS_TABLE_ID",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "value": {
+            "run_at": "={{ $now.toISO() }}",
+            "workflow": "={{ $workflow.name }}",
+            "records_fetched": "={{ $('Normalize and verify').first().json._summary.fetched }}",
+            "pages_fetched": "={{ $('Normalize and verify').first().json._summary.pages }}",
+            "status": "failed",
+            "note": "={{ $('Normalize and verify').first().json._summary.note }}"
+          },
+          "schema": [
+            {
+              "id": "run_at",
+              "displayName": "run_at",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "workflow",
+              "displayName": "workflow",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "records_fetched",
+              "displayName": "records_fetched",
+              "type": "number",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "pages_fetched",
+              "displayName": "pages_fetched",
+              "type": "number",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "note",
+              "displayName": "note",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ca02b001-0010-4010-8010-000000000010",
+      "name": "Fail loudly",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        720,
+        160
+      ],
+      "parameters": {
+        "errorMessage": "={{ 'Incomplete sync: ' + $('Normalize and verify').first().json._summary.note }}"
+      }
+    }
+  ],
+  "connections": {
+    "Every morning": {
+      "main": [
+        [
+          {
+            "node": "Measure the source",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "node": "Measure the source",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Measure the source": {
+      "main": [
+        [
+          {
+            "node": "Fetch every page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch every page": {
+      "main": [
+        [
+          {
+            "node": "Normalize and verify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and verify": {
+      "main": [
+        [
+          {
+            "node": "Did we get everything?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Did we get everything?": {
+      "main": [
+        [
+          {
+            "node": "Upsert contributors",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log the shortfall",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert contributors": {
+      "main": [
+        [
+          {
+            "node": "Log the run once",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log the shortfall": {
+      "main": [
+        [
+          {
+            "node": "Fail loudly",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

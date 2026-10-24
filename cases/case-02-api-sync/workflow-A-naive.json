@@ -109,7 +109,7 @@
         "operation": "insert",
         "dataTableId": {
           "__rl": true,
-          "value": "YfZ2WHjZ5RMkSt9S",
+          "value": "REPLACE_WITH_YOUR_CONTRIBUTORS_TABLE_ID",
           "mode": "id"
         },
         "columns": {
@@ -177,7 +177,7 @@
         "operation": "insert",
         "dataTableId": {
           "__rl": true,
-          "value": "VvHemTmO4iE2VWRQ",
+          "value": "REPLACE_WITH_YOUR_SYNC_RUNS_TABLE_ID",
           "mode": "id"
         },
         "columns": {
