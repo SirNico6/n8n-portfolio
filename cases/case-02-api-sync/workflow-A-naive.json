@@ -1,0 +1,315 @@
+{
+  "name": "case-02 · A naive · contributor sync",
+  "nodes": [
+    {
+      "id": "ca02a001-0001-4001-8001-000000000001",
+      "name": "Every morning",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -460,
+        -80
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ca02a001-0002-4002-8002-000000000002",
+      "name": "Run now",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -460,
+        100
+      ],
+      "webhookId": "ca02a001-0002-4002-8002-000000000002",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sync-contributors-naive",
+        "responseMode": "lastNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "ca02a001-0003-4003-8003-000000000003",
+      "name": "Fetch contributors",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -220,
+        0
+      ],
+      "parameters": {
+        "url": "https://api.github.com/repos/n8n-io/n8n-docs/contributors",
+        "options": {}
+      }
+    },
+    {
+      "id": "ca02a001-0004-4004-8004-000000000004",
+      "name": "Map fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "m1",
+              "name": "login",
+              "value": "={{ $json.login }}",
+              "type": "string"
+            },
+            {
+              "id": "m2",
+              "name": "github_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "m3",
+              "name": "contributions",
+              "value": "={{ $json.contributions }}",
+              "type": "number"
+            },
+            {
+              "id": "m4",
+              "name": "synced_at",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ca02a001-0005-4005-8005-000000000005",
+      "name": "Save contributors",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YfZ2WHjZ5RMkSt9S",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "value": {
+            "login": "={{ $json.login }}",
+            "github_id": "={{ $json.github_id }}",
+            "contributions": "={{ $json.contributions }}",
+            "synced_at": "={{ $json.synced_at }}"
+          },
+          "schema": [
+            {
+              "id": "login",
+              "displayName": "login",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "github_id",
+              "displayName": "github_id",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "contributions",
+              "displayName": "contributions",
+              "type": "number",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "synced_at",
+              "displayName": "synced_at",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ca02a001-0006-4006-8006-000000000006",
+      "name": "Log the run",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "VvHemTmO4iE2VWRQ",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "value": {
+            "run_at": "={{ $now.toISO() }}",
+            "workflow": "={{ $workflow.name }}",
+            "records_fetched": "={{ $('Map fields').all().length }}",
+            "pages_fetched": 1,
+            "status": "success",
+            "note": "sync completed"
+          },
+          "schema": [
+            {
+              "id": "run_at",
+              "displayName": "run_at",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "workflow",
+              "displayName": "workflow",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "records_fetched",
+              "displayName": "records_fetched",
+              "type": "number",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "pages_fetched",
+              "displayName": "pages_fetched",
+              "type": "number",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            },
+            {
+              "id": "note",
+              "displayName": "note",
+              "type": "string",
+              "required": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "defaultMatch": false
+            }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Every morning": {
+      "main": [
+        [
+          {
+            "node": "Fetch contributors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "node": "Fetch contributors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch contributors": {
+      "main": [
+        [
+          {
+            "node": "Map fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map fields": {
+      "main": [
+        [
+          {
+            "node": "Save contributors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save contributors": {
+      "main": [
+        [
+          {
+            "node": "Log the run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
