@@ -1,0 +1,199 @@
+{
+  "name": "case-03 A — WhatsApp agent (naive)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-naive",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "c3-001",
+      "name": "WhatsApp webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "c3-naive-hook"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c3-002",
+              "name": "api_base",
+              "value": "https://graph.facebook.com/v26.0",
+              "type": "string"
+            },
+            {
+              "id": "c3-003",
+              "name": "phone_number_id",
+              "value": "REPLACE_WITH_YOUR_PHONE_NUMBER_ID",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c3-004",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body;\nconst value = body.entry[0].changes[0].value;\nconst message = value.messages[0];\n\nreturn [{ json: {\n  from: message.from,\n  text: message.text.body,\n  message_id: message.id,\n  api_base: $json.api_base,\n  phone_number_id: $json.phone_number_id,\n} }];"
+      },
+      "id": "c3-005",
+      "name": "Read the message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const started = Date.now();\nawait new Promise((resolve) => setTimeout(resolve, 3000));\n\nconst item = $input.first().json;\nconst text = (item.text || '').toLowerCase();\n\nlet reply;\nif (text.includes('precio') || text.includes('costo')) {\n  reply = 'Te paso con un asesor para una cotizacion. Un momento.';\n} else if (text.includes('hola') || text.includes('buenas')) {\n  reply = 'Hola! Contame en que te puedo ayudar.';\n} else {\n  reply = 'Recibido. Un asesor te responde en breve.';\n}\n\nreturn [{ json: { ...item, reply, thought_for_ms: Date.now() - started } }];"
+      },
+      "id": "c3-006",
+      "name": "Think about the answer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.api_base }}/{{ $json.phone_number_id }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: \"whatsapp\", recipient_type: \"individual\", to: $json.from, type: \"text\", text: { body: $json.reply } }) }}",
+        "options": {}
+      },
+      "id": "c3-007",
+      "name": "Send the reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        800,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "WhatsApp Cloud API token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_YOUR_TABLE_ID"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "received_at": "={{ $now.toISO() }}",
+            "workflow": "A-naive",
+            "message_id": "={{ $('Read the message').item.json.message_id }}",
+            "wa_from": "={{ $('Read the message').item.json.from }}",
+            "inbound_text": "={{ $('Read the message').item.json.text }}",
+            "outbound_text": "={{ $('Think about the answer').item.json.reply }}",
+            "status": "sent",
+            "note": "no guards of any kind"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "c3-008",
+      "name": "Log the reply",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1000,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "WhatsApp webhook": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Read the message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the message": {
+      "main": [
+        [
+          {
+            "node": "Think about the answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Think about the answer": {
+      "main": [
+        [
+          {
+            "node": "Send the reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send the reply": {
+      "main": [
+        [
+          {
+            "node": "Log the reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

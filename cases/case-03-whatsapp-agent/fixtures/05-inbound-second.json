@@ -1,0 +1,39 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "REPLACE_WITH_YOUR_WABA_ID",
+      "changes": [
+        {
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "15550001111",
+              "phone_number_id": "REPLACE_WITH_YOUR_PHONE_NUMBER_ID"
+            },
+            "contacts": [
+              {
+                "profile": {
+                  "name": "Test Contact"
+                },
+                "wa_id": "15550002222"
+              }
+            ],
+            "messages": [
+              {
+                "from": "15550002222",
+                "id": "wamid.TEST000000000000000000000000000002",
+                "timestamp": "1792850748",
+                "type": "text",
+                "text": {
+                  "body": "Buenas, tambien queria saber si atienden los sabados"
+                }
+              }
+            ]
+          },
+          "field": "messages"
+        }
+      ]
+    }
+  ]
+}

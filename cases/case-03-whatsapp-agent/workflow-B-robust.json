@@ -1,0 +1,528 @@
+{
+  "name": "case-03 B — WhatsApp agent (robust)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c3-009",
+      "name": "Verification challenge",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        -260
+      ],
+      "webhookId": "c3-verify-hook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c3-010",
+              "leftValue": "={{ $json.query['hub.verify_token'] }}",
+              "rightValue": "REPLACE_WITH_YOUR_VERIFY_TOKEN",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "c3-011",
+              "leftValue": "={{ $json.query['hub.mode'] }}",
+              "rightValue": "subscribe",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "c3-012",
+      "name": "Is the verify token right?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        200,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $('Verification challenge').item.json.query['hub.challenge'] }}",
+        "options": {}
+      },
+      "id": "c3-013",
+      "name": "Echo the challenge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        420,
+        -340
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "forbidden",
+        "options": {
+          "responseCode": 403
+        }
+      },
+      "id": "c3-014",
+      "name": "Reject the handshake",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        420,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp",
+        "responseMode": "onReceived",
+        "responseCode": 200,
+        "responseData": "noData",
+        "options": {}
+      },
+      "id": "c3-015",
+      "name": "WhatsApp webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        60
+      ],
+      "webhookId": "c3-robust-hook"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c3-016",
+              "name": "api_base",
+              "value": "https://graph.facebook.com/v26.0",
+              "type": "string"
+            },
+            {
+              "id": "c3-017",
+              "name": "phone_number_id",
+              "value": "REPLACE_WITH_YOUR_PHONE_NUMBER_ID",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c3-018",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        200,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c3-019",
+              "leftValue": "={{ $json.body.entry[0].changes[0].value.messages ?? [] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "c3-020",
+      "name": "Is this an inbound message?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        420,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c3-021",
+              "name": "ignored",
+              "value": "true",
+              "type": "boolean"
+            },
+            {
+              "id": "c3-022",
+              "name": "reason",
+              "value": "={{ \"status callback: \" + ($json.body.entry[0].changes[0].value.statuses?.[0]?.status ?? \"unknown\") }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c3-023",
+      "name": "Ignore the delivery receipt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        660,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize before anything else looks at this: the dedupe key, the\n// consent log and the reply all have to agree on one shape.\nconst body = $json.body;\nconst change = body?.entry?.[0]?.changes?.[0];\nconst value = change?.value ?? {};\nconst message = value.messages?.[0];\n\nif (!message) {\n  throw new Error('No inbound message in payload; this branch should not have run');\n}\n\nfunction clean(v) {\n  if (typeof v !== 'string') return '';\n  return v.replace(/[\\u0000-\\u001F\\u007F]/g, ' ').replace(/\\s+/g, ' ').trim();\n}\n\n// Text lives in a different place for every message type, and a\n// sticker or a location has no text at all.\nconst type = message.type ?? 'unknown';\nconst text = clean(\n  message.text?.body ??\n  message.button?.text ??\n  message.interactive?.button_reply?.title ??\n  message.interactive?.list_reply?.title ??\n  ''\n);\n\nconst profileName = clean(value.contacts?.[0]?.profile?.name ?? '');\n\nreturn [{ json: {\n  message_id: message.id,\n  from: message.from,\n  profile_name: profileName,\n  type,\n  text,\n  supported: type === 'text' || type === 'button' || type === 'interactive',\n  wa_timestamp: message.timestamp ?? null,\n  phone_number_id: value.metadata?.phone_number_id ?? null,\n  api_base: $json.api_base,\n  config_phone_number_id: $json.phone_number_id,\n} }];"
+      },
+      "id": "c3-024",
+      "name": "Normalize the message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "removeItemsSeenInPreviousExecutions",
+        "logic": "removeItemsWithAlreadySeenKeyValues",
+        "dedupeValue": "={{ $json.message_id }}",
+        "options": {
+          "scope": "workflow",
+          "historySize": 10000
+        }
+      },
+      "id": "c3-025",
+      "name": "Seen this message before?",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        880,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_YOUR_TABLE_ID"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "received_at": "={{ $now.toISO() }}",
+            "workflow": "B-robust",
+            "message_id": "={{ $json.message_id }}",
+            "wa_from": "={{ $json.from }}",
+            "inbound_text": "={{ $json.text }}",
+            "outbound_text": "",
+            "status": "accepted",
+            "note": "={{ \"type=\" + $json.type + \" profile=\" + $json.profile_name }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "c3-026",
+      "name": "Log consent and inbound",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const started = Date.now();\nconst item = $input.first().json;\n\n// A sticker, an image or a location carries no text to answer. Decline it\n// explicitly. The generic fallback would read as if the bot had understood.\nif (!item.supported) {\n  return [{ json: { ...item, declined: true, reply: 'Por ahora solo puedo leer mensajes de texto. Escribime tu consulta y te respondo.', thought_for_ms: Date.now() - started } }];\n}\n\nawait new Promise((resolve) => setTimeout(resolve, 3000));\n\nconst text = (item.text || '').toLowerCase();\n\nlet reply;\nif (text.includes('precio') || text.includes('costo')) {\n  reply = 'Te paso con un asesor para una cotizacion. Un momento.';\n} else if (text.includes('hola') || text.includes('buenas')) {\n  reply = 'Hola! Contame en que te puedo ayudar.';\n} else {\n  reply = 'Recibido. Un asesor te responde en breve.';\n}\n\nreturn [{ json: { ...item, reply, thought_for_ms: Date.now() - started } }];"
+      },
+      "id": "c3-027",
+      "name": "Think about the answer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.api_base }}/{{ $json.config_phone_number_id }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: \"whatsapp\", recipient_type: \"individual\", to: $json.from, type: \"text\", text: { body: $json.reply } }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "c3-028",
+      "name": "Send the reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1540,
+        160
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "WhatsApp Cloud API token"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_YOUR_TABLE_ID"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "received_at": "={{ $now.toISO() }}",
+            "workflow": "B-robust",
+            "message_id": "={{ $('Normalize the message').item.json.message_id }}",
+            "wa_from": "={{ $('Normalize the message').item.json.from }}",
+            "inbound_text": "={{ $('Normalize the message').item.json.text }}",
+            "outbound_text": "={{ $('Think about the answer').item.json.reply }}",
+            "status": "sent",
+            "note": "={{ 'wa_message_id=' + ($json.messages?.[0]?.id ?? 'unknown') }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "c3-029",
+      "name": "Log the delivery",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1760,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_YOUR_TABLE_ID"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "received_at": "={{ $now.toISO() }}",
+            "workflow": "B-robust",
+            "message_id": "={{ $('Normalize the message').item.json.message_id }}",
+            "wa_from": "={{ $('Normalize the message').item.json.from }}",
+            "inbound_text": "={{ $('Normalize the message').item.json.text }}",
+            "outbound_text": "={{ $('Think about the answer').item.json.reply }}",
+            "status": "send_failed",
+            "note": "={{ 'after 3 tries: ' + ($json.error?.message ?? $json.error ?? 'unknown error') }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "c3-030",
+      "name": "Queue the failed reply",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1760,
+        260
+      ]
+    }
+  ],
+  "connections": {
+    "Verification challenge": {
+      "main": [
+        [
+          {
+            "node": "Is the verify token right?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is the verify token right?": {
+      "main": [
+        [
+          {
+            "node": "Echo the challenge",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject the handshake",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp webhook": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Is this an inbound message?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is this an inbound message?": {
+      "main": [
+        [
+          {
+            "node": "Normalize the message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignore the delivery receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize the message": {
+      "main": [
+        [
+          {
+            "node": "Seen this message before?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seen this message before?": {
+      "main": [
+        [
+          {
+            "node": "Log consent and inbound",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log consent and inbound": {
+      "main": [
+        [
+          {
+            "node": "Think about the answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Think about the answer": {
+      "main": [
+        [
+          {
+            "node": "Send the reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send the reply": {
+      "main": [
+        [
+          {
+            "node": "Log the delivery",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Queue the failed reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
